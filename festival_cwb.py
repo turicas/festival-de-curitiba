@@ -1,3 +1,4 @@
+import datetime
 import io
 from collections import OrderedDict
 
@@ -8,16 +9,22 @@ from rows.plugins.utils import slug
 
 class FestivalDeCuritibaSpider(scrapy.Spider):
     name = "festival-de-curitiba"
-    url = "http://festivaldecuritiba.com.br/atracoes/{page_number}/"
+    url = "http://festivaldecuritiba.com.br/atracoes/{page_number}/?date={date}"
 
-    def make_list_request(self, page_number):
+    def make_list_request(self, date, page_number):
         return scrapy.Request(
-            url=self.url.format(page_number=page_number),
-            meta={"page_number": page_number}
+            url=self.url.format(date=date, page_number=page_number),
+            meta={"date": date, "page_number": page_number}
         )
 
     def start_requests(self):
-        yield self.make_list_request(page_number=1)
+        start_date = datetime.date(2019, 3, 26)
+        final_date = datetime.date(2019, 4, 7)
+        date = start_date
+        one_day = datetime.timedelta(days=1)
+        while date <= final_date:
+            yield self.make_list_request(date=date, page_number=1)
+            date += one_day
 
     def parse(self, response):
         meta = response.request.meta
@@ -42,7 +49,7 @@ class FestivalDeCuritibaSpider(scrapy.Spider):
             )
 
         if response.xpath("//a[text() = 'Próxima >>']"):
-            yield self.make_list_request(page_number=meta["page_number"] + 1)
+            yield self.make_list_request(date=meta["date"], page_number=meta["page_number"] + 1)
 
     def parse_event(self, response):
         meta = response.request.meta
